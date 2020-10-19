@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(scales)
+library(ggforce)
 ```
 
 ```{r loaddata}
@@ -29,4 +30,29 @@ space_data %>%
 		 x = "Celestial body",
 		 caption = "Graph by David H. Montgomery")
 ggsave("distance_from_the_sun.png", width = 8, height = 6)
+```
+
+```{r distance_plot_pretty, message = FALSE}
+space_data %>%
+	mutate(across(-object, as.numeric)) %>%
+	filter(!is.na(distance_from_sun_million_km)) %>%
+	mutate(object = str_remove_all(object, "\\(an asteroid\\)")) %>%
+	ggplot(aes(x = fct_reorder(object, distance_from_sun_million_km, .desc = TRUE), y = distance_from_sun_million_km)) +
+	geom_col() +
+	geom_text(aes(label = comma(distance_from_sun_million_km, accuracy = .1), 
+				  hjust = case_when(distance_from_sun_million_km < 500 ~ -.1, TRUE ~ 1.1),
+				  color = case_when(distance_from_sun_million_km < 500 ~ "black", TRUE ~ "white"))) +
+	scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.05))) +
+	scale_color_identity() +
+	coord_flip() +
+	labs(title = "Distance from the Sun (millions of kilometers)",
+		 y = "Millions of kilometers",
+		 x = "Celestial body",
+		 caption = "Graph by David H. Montgomery") +
+	theme_minimal() +
+	theme(axis.title = element_blank(),
+		  axis.text.x = element_blank(),
+		  panel.grid.major.y = element_blank(),
+		  panel.grid.minor.y = element_blank())
+ggsave("distance_from_the_sun_pretty.png", width = 8, height = 6)
 ```
