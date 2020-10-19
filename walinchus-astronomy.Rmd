@@ -59,6 +59,19 @@ ggsave("distance_from_the_sun_pretty.png", width = 8, height = 6)
 ```
 
 
+<<<<<<< HEAD
+```{r}
+celestial_body_density <- space_data %>% 
+  filter(!density_kg_m3=="~~~")
+
+ggplot(data = celestial_body_density,
+       aes(x=mass_1022_kg, y=density_kg_m3, color=object))+
+  geom_point(alpha=.3)+
+  theme(axis.text.x = element_text(angle = 45, vjust= 1.2,hjust=1.1))
+```
+
+
+=======
 ```{r radius, message = FALSE, warning = FALSE}
 space_data %>%
 	mutate(across(-object, as.numeric)) %>%
@@ -95,5 +108,6 @@ space_data %>%
 		 y = "Maximum temperature (Celsius)")
 ggsave("temperature.png", width = 7, height = 7)
 ```
+>>>>>>> b60c3864a76fa1e448ad9bf7a508793777e81b76
 
 
