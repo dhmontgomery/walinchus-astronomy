@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(scales)
 library(ggforce)
+library(ggrepel)
 ```
 
 ```{r loaddata}
@@ -74,7 +75,25 @@ space_data %>%
 	labs(title = "Distance from the Sun",
 		 caption = "Graph by David H. Montgomery",
 		 size = "Diameter (km)")
-ggsave("distance_from_the_sun_sphere.png", width = 8, height = 6)
+ggsave("distance_from_the_sun_circles.png", width = 8, height = 6)
+```
+
+
+```{r}
+space_data %>%
+	mutate(across(-object, as.numeric)) %>%
+	filter(!is.na(distance_from_sun_million_km)) %>%
+	mutate(object = str_remove_all(object, "\\(an asteroid\\)")) %>%
+	ggplot(aes(x = temperature_min_c, y = temperature_max_c)) +
+	geom_point() +
+	geom_text_repel(aes(label = object)) +
+	theme_minimal() +
+	coord_fixed(clip = "off") +
+	labs(title = "Minimum and maximum temperatures",
+		 caption = "Graph by David H. Montgomery",
+		 x = "Minimum temperature (Celsius)",
+		 y = "Maximum temperature (Celsius)")
+ggsave("temperature.png", width = 7, height = 7)
 ```
 
 
