@@ -5,95 +5,149 @@ date: "10/19/2020"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
 library(scales)
 library(ggforce)
 library(ggrepel)
 ```
 
+## Load our data
+
+The first step is to always load your data in, and clean up any messy bits
+
 ```{r loaddata}
+# Load the data
 space_data <- read_csv("https://raw.githubusercontent.com/dhmontgomery/walinchus-astronomy/master/space_data.csv") %>%
-	janitor::clean_names()
+	janitor::clean_names() %>% # Run a function to clean up the column names
+	mutate(across(-object, as.numeric)) %>% # Convert everything to numeric
+	filter(!is.na(distance_from_sun_million_km)) %>% # Remove missing data
+	mutate(object = str_remove_all(object, "\\(an asteroid\\)")) # Remove "(an asteroid)" from Ceres' name
 ```
+
+## Create a quick graph: distance from the Sun
+
+The first thing I always like to do is make a quick, ugly chart to see what the data looks like.
 
 ```{r distance_plot, message = FALSE}
-space_data %>%
-	mutate(across(-object, as.numeric)) %>%
-	filter(!is.na(distance_from_sun_million_km)) %>%
-	mutate(object = str_remove_all(object, "\\(an asteroid\\)")) %>%
-	ggplot(aes(x = fct_reorder(object, distance_from_sun_million_km), y = distance_from_sun_million_km)) +
-	geom_col() +
-	scale_y_continuous(labels = comma) +
-	labs(title = "Distance from the Sun",
-		 y = "Millions of kilometers",
-		 x = "Celestial body",
-		 caption = "Graph by David H. Montgomery")
-ggsave("distance_from_the_sun.png", width = 8, height = 6)
+# Format the data
+space_data %>% # Start with our data	
+	# Create the graph
+	ggplot(aes(x = fct_reorder(object, distance_from_sun_million_km), # Set X as the object names, ordered by distance
+			   y = distance_from_sun_million_km)) + # Set Y as the distance
+	geom_col() + # Make it a column graph
+	scale_y_continuous(labels = comma) + # Format the y-axis text
+	# Set chart labels
+	labs(title = "Distance from the Sun", # Title
+		 y = "Millions of kilometers", # Y-axis title
+		 x = "Celestial body", # X-axis title
+		 caption = "Graph by David H. Montgomery") # Caption
+ggsave("distance_from_the_sun.png", width = 8, height = 6) # Save to disk
 ```
 
+## Make our graph prettier
+
+Once I've done that, I customioze the chart to make it look nicer — something I might want to publish.
+
 ```{r distance_plot_pretty, message = FALSE}
-space_data %>%
-	mutate(across(-object, as.numeric)) %>%
-	filter(!is.na(distance_from_sun_million_km)) %>%
-	mutate(object = str_remove_all(object, "\\(an asteroid\\)")) %>%
-	ggplot(aes(x = fct_reorder(object, distance_from_sun_million_km, .desc = TRUE), y = distance_from_sun_million_km)) +
-	geom_col() +
-	geom_text(aes(label = comma(distance_from_sun_million_km, accuracy = .1), 
-				  hjust = case_when(distance_from_sun_million_km < 500 ~ -.1, TRUE ~ 1.1),
+# Format the data
+space_data %>% # Start with our data
+	# Create the graph
+	ggplot(aes(x = fct_reorder(object, distance_from_sun_million_km, .desc = TRUE), # Set X as the object names, ordered by distance
+			   y = distance_from_sun_million_km)) + # Set Y as the distance
+	geom_col() + # Make it a column graph
+	# Add direct labels 
+	geom_text(aes(label = comma(distance_from_sun_million_km, accuracy = .1), # Set the label text
+				  # Set a different position for large and small values
+				  hjust = case_when(distance_from_sun_million_km < 500 ~ -.1, TRUE ~ 1.1), 
+				  # Set a different color for large and small values
 				  color = case_when(distance_from_sun_million_km < 500 ~ "black", TRUE ~ "white"))) +
-	scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.05))) +
-	scale_color_identity() +
-	coord_flip() +
+	scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.05))) + # Format scale
+	scale_color_identity() + # Tell R to treat "white" and "black" as actual colors
+	coord_flip() + # Rotate the chart 90º
+	# Set chart labels
 	labs(title = "Distance from the Sun (millions of kilometers)",
 		 y = "Millions of kilometers",
 		 x = "Celestial body",
 		 caption = "Graph by David H. Montgomery") +
-	theme_minimal() +
-	theme(axis.title = element_blank(),
-		  axis.text.x = element_blank(),
+	theme_minimal() + # Set a theme
+	# Customize theme
+	theme(axis.title = element_blank(), # Hide axis titles
+		  axis.text.x = element_blank(), # Hide x-axis labels
+		  # Hide vertical griddlines
 		  panel.grid.major.y = element_blank(),
 		  panel.grid.minor.y = element_blank())
-ggsave("distance_from_the_sun_pretty.png", width = 8, height = 6)
+ggsave("distance_from_the_sun_pretty.png", width = 8, height = 6) # Save to disk
 ```
 
+## Make a complicated graph, showing distance as orbits
+
+I often experiment with different ways of visualizing the data. The below chart takes the same data as above — each celestial object's distance from the Sun — and portrays it with approximations of orbits, a possibly more intuitive way to understand the data.
 
 ```{r radius, message = FALSE, warning = FALSE}
-space_data %>%
-	mutate(across(-object, as.numeric)) %>%
-	filter(!is.na(distance_from_sun_million_km)) %>%
-	mutate(object = str_remove_all(object, "\\(an asteroid\\)")) %>%
-	ggplot() +
-	geom_circle(aes(x0 = 0, y0 = 0, r = distance_from_sun_million_km), size = .2, color = "grey90") +
-	geom_point(aes(x = 0, y = distance_from_sun_million_km, size = diameter_km)) +
-	geom_label(data = . %>% filter(distance_from_sun_million_km > 500), aes(x = 0, y = distance_from_sun_million_km, label = object), hjust = 0, nudge_x = 350, color = NA, alpha = .5) +
-	geom_text(data = . %>% filter(distance_from_sun_million_km > 500), aes(x = 0, y = distance_from_sun_million_km, label = object), hjust = 0, nudge_x = 350) +
-	scale_size_continuous(labels = comma, breaks = c(1000, 10000, 100000)) +
-	coord_fixed() +
-	theme_void() +
+space_data %>% # Start with our data
+	ggplot() + # Start graph
+	geom_circle(aes(x0 = 0, y0 = 0, # Set our origin to (0, 0) 
+					r = distance_from_sun_million_km), # Use distance as our radius
+				size = .2, color = "grey90") + # Set size and color of lines
+	geom_point(aes(x = 0, y = distance_from_sun_million_km, # Add points
+				   size = diameter_km)) + # Govern dot size by diameter
+	# Add blank labels as a background (hacky workaround to make this look better)
+	geom_label(data = . %>% filter(distance_from_sun_million_km > 500), aes(x = 0, y = distance_from_sun_million_km, label = object), hjust = 0, nudge_x = 350, color = NA, alpha = .5) + 
+	# Add text labels
+	geom_text(data = . %>% filter(distance_from_sun_million_km > 500), # Filter out inner planets
+			  aes(x = 0, # x-axis position to 0
+			  	y = distance_from_sun_million_km, # y-axis position by distance
+			  	label = object), # Label from object name
+			  hjust = 0, nudge_x = 350) + # Set the position of the text relative to the dots
+	scale_size_continuous(labels = comma, breaks = c(1000, 10000, 100000)) + # Set legend display
+	coord_fixed() + # Set a fixed coordinate scale
+	theme_void() + # Hide grid, axes, etc.
+	# Label chart
 	labs(title = "Distance from the Sun",
 		 caption = "Graph by David H. Montgomery",
 		 size = "Diameter (km)")
-ggsave("distance_from_the_sun_circles.png", width = 8, height = 6)
+ggsave("distance_from_the_sun_circles.png", width = 8, height = 6) # Save to disk
 ```
 
+You can't legibly show the inner planets and outer planets on the same scale. What are some solutions to this?
+
+## Plot min and max temperatures
+
+A key part of data analysis is to understand the relationship between two different variables. Here I plot each celestial body's minimum and maximum temperature. Here we can see all the planets fall below freezing sometimes — except Venus, by far the hottest planet in the solar system. Why is Venus so hot?
+
+Meanwhile, the rest of the planets can all get pretty cold, but they vary wildly in terms of how hot they can get. Some planets are cold all the time, Mercury goes from super cold to super hot, and Earth and Mars max out at milder temperatures.
 
 ```{r}
-space_data %>%
-	mutate(across(-object, as.numeric)) %>%
-	filter(!is.na(distance_from_sun_million_km)) %>%
-	mutate(object = str_remove_all(object, "\\(an asteroid\\)")) %>%
-	ggplot(aes(x = temperature_min_c, y = temperature_max_c)) +
-	geom_point() +
-	geom_text_repel(aes(label = object)) +
-	theme_minimal() +
-	coord_fixed(clip = "off") +
+space_data %>% # Start with our data
+	# Make the chart
+	ggplot(aes(x = temperature_min_c, # x = min temperature
+			   y = temperature_max_c)) + # y = max temperature
+	geom_point() + # Make it a scatterplot
+	geom_text_repel(aes(label = object)) + # Add labels, repelled away if they overlap
+	theme_minimal() + # Set our theme
+	coord_fixed(clip = "off") + # Fix coordinates, turn off clipping at the edge of the graph
+	# Label chart
 	labs(title = "Minimum and maximum temperatures",
 		 caption = "Graph by David H. Montgomery",
 		 x = "Minimum temperature (Celsius)",
 		 y = "Maximum temperature (Celsius)")
-ggsave("temperature.png", width = 7, height = 7)
+ggsave("temperature.png", width = 7, height = 7) # Save to disk
 ```
 
+## Learning more
 
+Various R tutorials I've written:
+
+- [R data analysis & visualization for beginners](https://github.com/dhmontgomery/r-data-for-beginners)
+- [Gathering and cleaning data in R](https://github.com/dhmontgomery/nicar19/blob/master/r3.md)
+- [Making graphics with R](https://github.com/dhmontgomery/nicar20/blob/master/ggplot-graphics/readme.md)
+
+Hadley Wickham and Garrett Grolemund's excellent free ebook, [R for Data Science](https://r4ds.had.co.nz/)
+
+The video game [Kerbal Space Program](https://www.kerbalspaceprogram.com/)
+
+CGP Grey's video, ["Which Planet is Closest"](https://www.youtube.com/watch?v=SumDHcnCRuU):
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/SumDHcnCRuU" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
