@@ -10,3 +10,23 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(scales)
 ```
+
+```{r loaddata}
+space_data <- read_csv("https://raw.githubusercontent.com/dhmontgomery/walinchus-astronomy/master/space_data.csv") %>%
+	janitor::clean_names()
+```
+
+```{r distance_plot, message = FALSE}
+space_data %>%
+	mutate(across(-object, as.numeric)) %>%
+	filter(!is.na(distance_from_sun_million_km)) %>%
+	mutate(object = str_remove_all(object, "\\(an asteroid\\)")) %>%
+	ggplot(aes(x = fct_reorder(object, distance_from_sun_million_km), y = distance_from_sun_million_km)) +
+	geom_col() +
+	scale_y_continuous(labels = comma) +
+	labs(title = "Distance from the Sun",
+		 y = "Millions of kilometers",
+		 x = "Celestial body",
+		 caption = "Graph by David H. Montgomery")
+ggsave("distance_from_the_sun.png", width = 8, height = 6)
+```
