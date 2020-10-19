@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(scales)
 library(ggforce)
+library(ggrepel)
 ```
 
 ```{r loaddata}
@@ -58,6 +59,7 @@ ggsave("distance_from_the_sun_pretty.png", width = 8, height = 6)
 ```
 
 
+<<<<<<< HEAD
 ```{r}
 celestial_body_density <- space_data %>% 
   filter(!density_kg_m3=="~~~")
@@ -69,5 +71,43 @@ ggplot(data = celestial_body_density,
 ```
 
 
+=======
+```{r radius, message = FALSE, warning = FALSE}
+space_data %>%
+	mutate(across(-object, as.numeric)) %>%
+	filter(!is.na(distance_from_sun_million_km)) %>%
+	mutate(object = str_remove_all(object, "\\(an asteroid\\)")) %>%
+	ggplot() +
+	geom_circle(aes(x0 = 0, y0 = 0, r = distance_from_sun_million_km), size = .2, color = "grey90") +
+	geom_point(aes(x = 0, y = distance_from_sun_million_km, size = diameter_km)) +
+	geom_label(data = . %>% filter(distance_from_sun_million_km > 500), aes(x = 0, y = distance_from_sun_million_km, label = object), hjust = 0, nudge_x = 350, color = NA, alpha = .5) +
+	geom_text(data = . %>% filter(distance_from_sun_million_km > 500), aes(x = 0, y = distance_from_sun_million_km, label = object), hjust = 0, nudge_x = 350) +
+	scale_size_continuous(labels = comma, breaks = c(1000, 10000, 100000)) +
+	coord_fixed() +
+	theme_void() +
+	labs(title = "Distance from the Sun",
+		 caption = "Graph by David H. Montgomery",
+		 size = "Diameter (km)")
+ggsave("distance_from_the_sun_circles.png", width = 8, height = 6)
+```
+
+
+```{r}
+space_data %>%
+	mutate(across(-object, as.numeric)) %>%
+	filter(!is.na(distance_from_sun_million_km)) %>%
+	mutate(object = str_remove_all(object, "\\(an asteroid\\)")) %>%
+	ggplot(aes(x = temperature_min_c, y = temperature_max_c)) +
+	geom_point() +
+	geom_text_repel(aes(label = object)) +
+	theme_minimal() +
+	coord_fixed(clip = "off") +
+	labs(title = "Minimum and maximum temperatures",
+		 caption = "Graph by David H. Montgomery",
+		 x = "Minimum temperature (Celsius)",
+		 y = "Maximum temperature (Celsius)")
+ggsave("temperature.png", width = 7, height = 7)
+```
+>>>>>>> b60c3864a76fa1e448ad9bf7a508793777e81b76
 
 
