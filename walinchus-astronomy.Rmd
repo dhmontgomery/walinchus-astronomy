@@ -56,3 +56,18 @@ space_data %>%
 		  panel.grid.minor.y = element_blank())
 ggsave("distance_from_the_sun_pretty.png", width = 8, height = 6)
 ```
+
+
+```{r}
+celestial_body_density <- space_data %>% 
+  filter(!density_kg_m3=="~~~")
+
+ggplot(data = celestial_body_density,
+       aes(x=mass_1022_kg, y=density_kg_m3, color=object))+
+  geom_point(alpha=.3)+
+  theme(axis.text.x = element_text(angle = 45, vjust= 1.2,hjust=1.1))
+```
+
+
+
+
